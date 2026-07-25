@@ -2,7 +2,7 @@ import { SITE } from "@/lib/site-config";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-hairline bg-ink px-6 pb-44 pt-10 text-center sm:pb-12">
+    <footer className="border-t border-hairline bg-ink px-6 pb-44 pt-10 text-center sm:pb-28">
       <p className="font-display text-sm tracking-widest2 text-gold/80">
         {SITE.brandName}
       </p>
