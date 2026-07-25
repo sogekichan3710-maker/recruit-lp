@@ -25,6 +25,14 @@ export const INTERVIEW_VENUE = {
   hours: "面接受付：月〜土 19:00〜20:00（日曜定休）",
 };
 
+// 下部固定CTA上部に表示する体入時給訴求（Sticky CTA専用）
+export const STICKY_WAGE = {
+  note: "未経験でも安心・高待遇でお迎えします",
+  label: "体入時給",
+  amount: "10,000",
+  unit: "円以上",
+};
+
 export const HERO = {
   eyebrow: "FUKUOKA PREMIUM LOUNGE RECRUIT",
   titleLines: ["上質な空間で、", "新しい私に、出会う。"],
