@@ -27,7 +27,7 @@ export default function StoreGallery() {
               <span className="text-gold/60 font-display text-sm">
                 {String(storeIdx + 1).padStart(2, "0")}
               </span>
-              <h3 className="font-display text-xl sm:text-2xl font-semibold text-ivory">
+              <h3 className="font-display text-2xl sm:text-3xl font-semibold text-ivory">
                 {store.name}
               </h3>
               <span className="ml-auto hidden text-xs tracking-widest2 uppercase text-muted sm:inline">
