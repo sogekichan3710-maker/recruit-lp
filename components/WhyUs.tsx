@@ -2,24 +2,24 @@
 
 import { motion } from "framer-motion";
 import {
-  Sparkles,
   TrendingUp,
+  Users,
   Car,
   ShieldCheck,
-  HeartHandshake,
-  CalendarCheck,
+  GraduationCap,
+  Award,
   LucideIcon,
 } from "lucide-react";
 import SectionHeading from "./SectionHeading";
 import { WHY_US } from "@/lib/site-config";
 
 const ICONS: Record<string, LucideIcon> = {
-  Sparkles,
   TrendingUp,
+  Users,
   Car,
   ShieldCheck,
-  HeartHandshake,
-  CalendarCheck,
+  GraduationCap,
+  Award,
 };
 
 export default function WhyUs() {
@@ -28,7 +28,7 @@ export default function WhyUs() {
       <SectionHeading
         eyebrow="Why Us"
         title="選ばれる理由"
-        desc="安心して長く働ける環境を、私たちは大切にしています。"
+        desc="高還元・働きやすさ・教育体制。ヴァルゴが選ばれる理由があります。"
       />
 
       <div className="mx-auto mt-14 grid max-w-5xl grid-cols-2 gap-3.5 sm:grid-cols-3 sm:gap-5">
@@ -44,8 +44,13 @@ export default function WhyUs() {
               whileHover={{ y: -4 }}
               className="group rounded-2xl border border-hairline bg-surface/60 p-5 sm:p-6 text-left transition-colors duration-300 hover:border-gold/40 hover:bg-surface2"
             >
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-gold/40 text-gold">
-                <Icon size={18} strokeWidth={1.5} />
+              <div className="mb-4 flex items-center gap-2.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold/40 text-gold">
+                  <Icon size={18} strokeWidth={1.5} />
+                </div>
+                <span className="font-display text-[10px] sm:text-xs tracking-wide text-gold-bright uppercase">
+                  {item.rank}
+                </span>
               </div>
               <h3 className="font-display text-[15px] sm:text-lg font-semibold text-ivory leading-snug">
                 {item.title}
