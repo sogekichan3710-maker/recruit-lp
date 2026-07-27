@@ -53,7 +53,14 @@ export default function Hero() {
           transition={{ duration: 0.8, delay: 0.5 }}
           className="mt-5 max-w-md text-sm sm:text-base text-ivory/80 leading-relaxed"
         >
-          {HERO.subCopy}
+          <span className="block text-gold-bright/90 tracking-wide text-xs sm:text-sm mb-1.5">
+            {HERO.subCopyLines[0]}
+          </span>
+          {HERO.subCopyLines.slice(1).map((line, i) => (
+            <span key={i} className="block">
+              {line}
+            </span>
+          ))}
         </motion.p>
 
         <motion.div
