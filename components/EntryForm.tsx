@@ -1,22 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  X,
-  Loader2,
-  CheckCircle2,
-  MapPin,
-  MessageCircle,
-  ExternalLink,
-  Copy,
-  Check,
-  ChevronLeft,
-} from "lucide-react";
-import { useApplyModal } from "./ApplyModalProvider";
+import { useRouter } from "next/navigation";
+import { Loader2, ChevronLeft } from "lucide-react";
 import { submitApplication } from "@/lib/submit-application";
 import { ApplyFormData, StoreChoice, STORE_LABEL } from "@/lib/apply-types";
-import { SITE, INTERVIEW_VENUE } from "@/lib/site-config";
+import { SITE } from "@/lib/site-config";
 
 const TIME_OPTIONS = ["19:00", "19:15", "19:30", "19:45"];
 
@@ -37,15 +26,7 @@ function formatJaDate(dateStr: string) {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日(${weekday})`;
 }
 
-function buildCancelMessage(data: ApplyFormData | null) {
-  const name = data?.name || "（お名前）";
-  const when = data
-    ? `${formatJaDate(data.interviewDate)} ${data.interviewTime}〜`
-    : "（面接日時）";
-  return `面接予約キャンセル\nお名前：${name}\n面接日時：${when}`;
-}
-
-type Step = "form" | "confirm" | "submitting" | "done" | "error";
+type Step = "form" | "confirm" | "submitting" | "error";
 
 const emptyForm: ApplyFormData = {
   name: "",
@@ -65,26 +46,16 @@ function isLikelyPhone(value: string) {
   return digits.length >= 10 && digits.length <= 11;
 }
 
-export default function ApplyModal() {
-  const { isOpen, closeModal } = useApplyModal();
+// /thanks ページへ完了内容を引き継ぐためのセッションストレージキー
+export const THANKS_STORAGE_KEY = "recruit-lp-apply-result";
+
+export default function EntryForm() {
+  const router = useRouter();
   const [step, setStep] = useState<Step>("form");
   const [form, setForm] = useState<ApplyFormData>(emptyForm);
   const [dateError, setDateError] = useState("");
-  const [submittedData, setSubmittedData] = useState<ApplyFormData | null>(null);
 
   const minDate = useMemo(() => todayStr(), []);
-
-  if (!isOpen) return null;
-
-  const resetAndClose = () => {
-    closeModal();
-    setTimeout(() => {
-      setStep("form");
-      setForm(emptyForm);
-      setDateError("");
-      setSubmittedData(null);
-    }, 300);
-  };
 
   const update = (patch: Partial<ApplyFormData>) =>
     setForm((prev) => ({ ...prev, ...patch }));
@@ -111,8 +82,12 @@ export default function ApplyModal() {
     setStep("submitting");
     const result = await submitApplication(form);
     if (result.success) {
-      setSubmittedData(form);
-      setStep("done");
+      try {
+        sessionStorage.setItem(THANKS_STORAGE_KEY, JSON.stringify(form));
+      } catch {
+        // セッションストレージが使えない環境でも、完了画面はフォールバック表示になるだけなので送信自体は継続する
+      }
+      router.push("/thanks");
     } else {
       console.error("[recruit-lp] 面接予約の送信に失敗しました", result.error);
       setStep("error");
@@ -120,61 +95,28 @@ export default function ApplyModal() {
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[60] flex items-end justify-center bg-ink/80 backdrop-blur-sm sm:items-center sm:p-6"
-          onClick={resetAndClose}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-h-[92svh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-hairline bg-surface sm:rounded-3xl sm:shadow-card"
-          >
-            <button
-              onClick={resetAndClose}
-              aria-label="閉じる"
-              className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-ink/50 text-ivory/80 hover:text-ivory"
-            >
-              <X size={18} strokeWidth={1.75} />
-            </button>
-
-            <div className="px-6 pb-8 pt-8 sm:px-8">
-              {step === "form" && (
-                <FormView
-                  form={form}
-                  update={update}
-                  dateError={dateError}
-                  onDateChange={handleDateChange}
-                  minDate={minDate}
-                  canProceed={!!canProceed}
-                  onNext={() => setStep("confirm")}
-                />
-              )}
-              {step === "confirm" && (
-                <ConfirmStepView
-                  form={form}
-                  onBack={() => setStep("form")}
-                  onSubmit={handleConfirmSubmit}
-                />
-              )}
-              {step === "submitting" && <SubmittingView />}
-              {step === "done" && (
-                <ConfirmationView data={submittedData} onClose={resetAndClose} />
-              )}
-              {step === "error" && <ErrorView onRetry={() => setStep("confirm")} />}
-            </div>
-          </motion.div>
-        </motion.div>
+    <div className="mx-auto w-full max-w-lg">
+      {step === "form" && (
+        <FormView
+          form={form}
+          update={update}
+          dateError={dateError}
+          onDateChange={handleDateChange}
+          minDate={minDate}
+          canProceed={!!canProceed}
+          onNext={() => setStep("confirm")}
+        />
       )}
-    </AnimatePresence>
+      {step === "confirm" && (
+        <ConfirmStepView
+          form={form}
+          onBack={() => setStep("form")}
+          onSubmit={handleConfirmSubmit}
+        />
+      )}
+      {step === "submitting" && <SubmittingView />}
+      {step === "error" && <ErrorView onRetry={() => setStep("confirm")} />}
+    </div>
   );
 }
 
@@ -396,112 +338,6 @@ function SubmittingView() {
     <div className="flex flex-col items-center justify-center py-16">
       <Loader2 size={28} className="animate-spin text-gold" />
       <p className="mt-4 text-sm text-muted">送信しています…</p>
-    </div>
-  );
-}
-
-function ConfirmationView({
-  data,
-  onClose,
-}: {
-  data: ApplyFormData | null;
-  onClose: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-  const cancelMessage = buildCancelMessage(data);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(cancelMessage);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // クリップボードAPIが使えない環境では、下の文面表示から手動でコピーしてもらう
-    }
-  };
-
-  return (
-    <div>
-      <div className="mb-5 flex items-center gap-3 text-gold">
-        <CheckCircle2 size={26} strokeWidth={1.5} />
-        <p className="font-display text-lg sm:text-xl font-semibold text-ivory">予約完了です。</p>
-      </div>
-
-      <p className="text-sm text-ivory/90 leading-relaxed">
-        {data?.name ? `${data.name} 様、` : ""}
-        面接お待ちしております。
-      </p>
-
-      {data && (
-        <p className="mt-2 text-xs text-muted leading-relaxed">
-          {STORE_LABEL[data.preferredStore]} ／ {formatJaDate(data.interviewDate)} {data.interviewTime}〜
-        </p>
-      )}
-
-      <div className="mt-6 rounded-2xl border border-hairline bg-ink p-4">
-        <p className="mb-2 flex items-center gap-2 text-xs tracking-widest2 text-gold uppercase">
-          <MapPin size={14} strokeWidth={1.75} />
-          面接場所
-        </p>
-        <p className="text-sm text-ivory">{INTERVIEW_VENUE.name}</p>
-        <p className="mt-1 text-xs text-muted leading-relaxed">{INTERVIEW_VENUE.address}</p>
-        <p className="mt-1 text-xs text-muted">{INTERVIEW_VENUE.hours}</p>
-
-        <div className="mt-3 overflow-hidden rounded-xl border border-hairline">
-          <iframe
-            title="面接会場マップ"
-            src={INTERVIEW_VENUE.mapEmbedSrc}
-            className="h-44 w-full"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
-        </div>
-
-        <a
-          href={INTERVIEW_VENUE.mapLinkUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 inline-flex items-center gap-1.5 text-xs text-gold hover:text-gold-bright"
-        >
-          Googleマップで開く
-          <ExternalLink size={12} strokeWidth={1.75} />
-        </a>
-      </div>
-
-      <div className="mt-6 rounded-2xl border border-hairline bg-ink p-4">
-        <p className="mb-2 text-xs tracking-widest2 text-gold uppercase">面接をキャンセルする場合</p>
-        <p className="mb-3 text-xs text-muted leading-relaxed">
-          公式LINEに、下記の文面を送ってご連絡ください。
-        </p>
-        <pre className="whitespace-pre-wrap rounded-lg bg-surface2 p-3 font-sans text-xs text-ivory/90">
-          {cancelMessage}
-        </pre>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <button
-            onClick={handleCopy}
-            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-gold/40 px-4 py-2.5 text-xs text-ivory/80 transition-colors hover:border-gold hover:text-ivory"
-          >
-            {copied ? <Check size={14} strokeWidth={1.75} /> : <Copy size={14} strokeWidth={1.75} />}
-            {copied ? "コピーしました" : "文面をコピー"}
-          </button>
-          <a
-            href={SITE.lineUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-gradient-to-b from-gold-bright to-gold px-4 py-2.5 text-xs font-medium text-ink"
-          >
-            <MessageCircle size={14} strokeWidth={1.75} />
-            LINEを開く
-          </a>
-        </div>
-      </div>
-
-      <button
-        onClick={onClose}
-        className="mt-6 w-full text-center text-xs text-muted underline underline-offset-2 hover:text-ivory"
-      >
-        閉じる
-      </button>
     </div>
   );
 }

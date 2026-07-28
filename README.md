@@ -24,6 +24,8 @@ npm run start
 app/
   layout.tsx      … フォント・SEOメタデータ
   page.tsx        … セクションの並び順のみを管理
+  entry/page.tsx  … 面接・体験予約フォームページ（/entry）
+  thanks/page.tsx … 応募完了ページ（/thanks）
   globals.css
 components/
   Hero.tsx            … ①ファーストビュー（背景動画・キャッチコピー・CTA）
@@ -35,10 +37,9 @@ components/
   StickyApplyButton.tsx … 常時表示のLINE応募ボタン（モバイル下部固定／デスクトップ右下）
   Footer.tsx
   SectionHeading.tsx  … 共通の見出し（金のラインが伸びるシグネチャー演出）
-  GoldButton.tsx      … 共通のCTAボタン
-components/
-  ApplyModalProvider.tsx … 面接予約モーダルの開閉状態（Context）
-  ApplyModal.tsx          … 面接予約モーダル本体（入力→確認→完了／エラー画面）
+  GoldButton.tsx      … 共通のCTAボタン（hrefを渡すと通常のページ遷移リンクになる）
+  EntryForm.tsx       … /entry のフォーム本体（入力→確認→送信／エラー画面）
+  ThanksView.tsx      … /thanks の完了画面本体（EntryFormがsessionStorage経由で渡した内容を表示）
 lib/
   apply-types.ts      … 面接予約フォームのデータ型定義
   submit-application.ts … 送信処理（現時点はローカル保持のみ。将来API送信に差し替え）
@@ -88,7 +89,11 @@ ffmpeg 等で `-movflags +faststart` を付けてWeb用に最適化すること�
 
 ## 面接・体験予約フローについて
 
-「面接・体験予約」ボタンから開くモーダルは、次の4ステップです。
+LP上の「面接・体験予約」ボタンは `/entry` への通常のページ遷移です（モーダルは廃止済み）。
+LINE公式・Instagram・TikTok・QRコード・ポータルサイトなど、外部からの応募導線もすべて
+`https://ドメイン/entry` に統一してリンクすれば、このフォームへ直接遷移します。
+
+`/entry`（`EntryForm.tsx`）は次の4ステップです。
 
 1. **入力**：①お名前 ②ふりがな ③生年月日 ④電話番号（必須。ハイフン有無どちらでも可）
    ⑤ご希望店舗（VIRGO / REGINA） ⑥面接希望日時（月〜土、19:00〜19:45スタートの15分刻み。
@@ -96,11 +101,14 @@ ffmpeg 等で `-movflags +faststart` を付けてWeb用に最適化すること�
 2. **確認**：入力内容を一覧表示し、「入力に戻る」で修正、「予約を確定する」で送信
 3. **送信**：`lib/submit-application.ts` の `submitApplication()` が
    `app/api/apply/route.ts`（本LPのサーバー側）経由でsaiyouのAPIへ送信します。
-   **saiyou側がAPI成功を返した場合のみ**完了画面へ進みます。失敗時はエラー画面
+   **saiyou側がAPI成功を返した場合のみ** `/thanks` へ遷移します。失敗時はエラー画面
    （「送信できませんでした。時間を空けて再度お試しください。またはLINE応募をご利用ください。」）
-   を表示し、予約完了扱いにはしません。
-4. **完了**：「予約完了です。面接お待ちしております。」と共に、面接会場
-   （現状 THE VIRGO FUKUOKA の住所）・地図・キャンセル方法を表示します。
+   を`/entry`上に表示し、予約完了扱いにはしません。
+4. **完了**：送信成功時は入力内容を `sessionStorage` に一時保存したうえで `/thanks`
+   （`ThanksView.tsx`）へ遷移し、「予約完了です。面接お待ちしております。」と共に、
+   面接会場（現状 THE VIRGO FUKUOKA の住所）・地図・キャンセル方法を表示します。
+
+ブラウザの「戻る」ボタンで `/entry` からLP（`/`）へ、通常のページ遷移として戻れます。
 
 ### 送信データの形
 
@@ -141,7 +149,7 @@ type ApplyFormData = {
 - 面接会場の住所は現状 THE VIRGO FUKUOKA のものを設定しています
   （`lib/site-config.ts` の `INTERVIEW_VENUE`）。REGINA希望者にも
   同一会場で面接を行う想定です。異なる場合は店舗ごとに出し分けるよう
-  `ApplyModal.tsx` の `ConfirmationView` を調整してください。
+  `ThanksView.tsx` を調整してください。
 - 公式LINE URLは `https://lin.ee/tJNd5ae` に統一済みです
   （「LINEで応募する」「面接キャンセル」「問い合わせ」「固定LINEボタン」すべて）。
   変更する場合は `lib/site-config.ts` の `SITE.lineUrl` のみ編集すれば

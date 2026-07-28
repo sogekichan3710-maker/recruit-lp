@@ -34,7 +34,7 @@ export const STICKY_WAGE = {
 };
 
 export const HERO = {
-  eyebrow: "FUKUOKA PREMIUM LOUNGE RECRUIT",
+  eyebrow: "FUKUOKA PREMIUM CABARET RECRUIT",
   titleLines: [
     "ヴァルゴだから",
     "実現できる、",
@@ -43,7 +43,7 @@ export const HERO = {
   ],
   subCopyLines: [
     "THE VIRGO / THE VIRGO REGINA",
-    "福岡随一のラグジュアリーラウンジで、",
+    "福岡最大級の高級キャバクラで、",
     "高収入も働きやすさも妥協しない選択を。",
   ],
   videoSrc: "/videos/hero-virgo.mp4", // ★背景動画（差し替え可）
@@ -104,7 +104,7 @@ export const STORES: {
     enName: "VIRGO",
     tagline: "モダン×ラグジュアリー",
     description:
-      "黒を基調とした洗練された空間に、ネイビーとゴールドが織りなすラグジュアリーな世界観。上質なお客様が集う、THE VIRGOを代表するメインラウンジです。",
+      "黒とネイビーを基調とした洗練された空間。ネイビーとゴールドが織りなす高級感あふれる店内で、THE VIRGOを代表するラグジュアリーなVIP空間です。",
     images: [
       { src: "/images/virgo-01.jpg", alt: "THE VIRGO FUKUOKA 店内 1" },
       { src: "/images/virgo-02.jpg", alt: "THE VIRGO FUKUOKA 店内 2" },
@@ -119,7 +119,7 @@ export const STORES: {
     enName: "REGINA",
     tagline: "クラシック×気品",
     description:
-      "赤とゴールドを基調にした華やかで特別感のある空間。上質な時間と非日常を演出する、THE VIRGO REGINAならではのラグジュアリーラウンジです。",
+      "赤とゴールドを基調とした華やかな空間。特別感と上質さを兼ね備えた店内で、THE VIRGO REGINAを代表するラグジュアリーなVIP空間です。",
     images: [
       { src: "/images/regina-01.jpg", alt: "REGINA 店内 1" },
       { src: "/images/regina-02.jpg", alt: "REGINA 店内 2" },
