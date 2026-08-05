@@ -23,10 +23,12 @@ npm run start
 ```
 app/
   layout.tsx      … フォント・SEOメタデータ
-  page.tsx        … セクションの並び順のみを管理
+  page.tsx        … セクションの並び順のみを管理（ホーム / ）
+  entry/page.tsx  … 応募フォームページ（/entry。独立したURL）
+  thanks/page.tsx … 応募完了ページ（/thanks。独立したURL）
   globals.css
 components/
-  Hero.tsx            … ①ファーストビュー（背景動画・キャッチコピー・CTA）
+  Hero.tsx            … ①ファーストビュー（背景動画・キャッチコピー・CTA。「面接・体験予約」は/entryへ遷移）
   WhyUs.tsx           … ②選ばれる理由（アイコンカード）
   StoreGallery.tsx    … ③店舗紹介（横スクロールギャラリー）
   PVSection.tsx       … ④店内PV
@@ -35,13 +37,14 @@ components/
   StickyApplyButton.tsx … 常時表示のLINE応募ボタン（モバイル下部固定／デスクトップ右下）
   Footer.tsx
   SectionHeading.tsx  … 共通の見出し（金のラインが伸びるシグネチャー演出）
-  GoldButton.tsx      … 共通のCTAボタン
+  GoldButton.tsx      … 共通のCTAボタン（hrefを渡すとnext/link、onClickを渡すとbutton）
 components/
-  ApplyModalProvider.tsx … 面接予約モーダルの開閉状態（Context）
-  ApplyModal.tsx          … 面接予約モーダル本体（入力→確認→完了／エラー画面）
+  ApplyForm.tsx    … 応募フォーム本体（入力→確認→送信／エラー画面）。/entryページの中身として表示
+  ThanksContent.tsx … 応募完了の表示内容（面接会場・キャンセル導線）。/thanksページの中身として表示
 lib/
   apply-types.ts      … 面接予約フォームのデータ型定義
-  submit-application.ts … 送信処理（現時点はローカル保持のみ。将来API送信に差し替え）
+  apply-format.ts     … 日付表示・キャンセル文面などの共通フォーマット関数
+  submit-application.ts … 送信処理（app/api/apply/route.ts経由でsaiyouの公開APIへ送信）
   site-config.ts      … ★文言・画像パス・LINE URL などはすべてここで一元管理
 public/
   videos/hero-virgo.mp4   … ファーストビュー背景動画
@@ -88,36 +91,49 @@ ffmpeg 等で `-movflags +faststart` を付けてWeb用に最適化すること�
 
 ## 面接・体験予約フローについて
 
-「面接・体験予約」ボタンから開くモーダルは、次の4ステップです。
+応募フォームは `/entry` という独立したページです（モーダルではありません）。
+ホーム（`/`）内の「面接・体験予約」ボタンは `next/link` で `/entry` へページ遷移します
+（`components/Hero.tsx`）。LINE公式アカウント・Instagram・TikTok・QRコードなどから
+`https://本番ドメイン/entry` を直接開いても、ホームを経由せずフォームが表示されます。
 
-1. **入力**：①お名前 ②ふりがな ③生年月日 ④電話番号（必須。ハイフン有無どちらでも可）
-   ⑤ご希望店舗（VIRGO / REGINA） ⑥面接希望日時（月〜土、19:00〜19:45スタートの15分刻み。
+`/entry` の中身（`components/ApplyForm.tsx`）は、次の3ステップです。
+
+1. **入力**：①希望職種（キャスト／スタッフ。必須） ②お名前 ③ふりがな ④生年月日
+   ⑤電話番号（必須。ハイフン有無どちらでも可） ⑥ご希望店舗（希望職種がスタッフの場合のみ
+   「どちらでも可」も選択可） ⑦面接希望日時（月〜土、19:00〜19:45スタートの15分刻み。
    日曜を選ぶとエラー表示）
 2. **確認**：入力内容を一覧表示し、「入力に戻る」で修正、「予約を確定する」で送信
 3. **送信**：`lib/submit-application.ts` の `submitApplication()` が
    `app/api/apply/route.ts`（本LPのサーバー側）経由でsaiyouのAPIへ送信します。
-   **saiyou側がAPI成功を返した場合のみ**完了画面へ進みます。失敗時はエラー画面
+   **saiyou側がAPI成功を返した場合のみ** `/thanks` へ遷移します。失敗時はエラー画面
    （「送信できませんでした。時間を空けて再度お試しください。またはLINE応募をご利用ください。」）
-   を表示し、予約完了扱いにはしません。
-4. **完了**：「予約完了です。面接お待ちしております。」と共に、面接会場
-   （現状 THE VIRGO FUKUOKA の住所）・地図・キャンセル方法を表示します。
+   を`/entry`内に表示し、予約完了扱いにはしません。
+
+送信成功後は `/thanks`（独立したページ）へ遷移し、`components/ThanksContent.tsx` が
+「予約完了です。面接お待ちしております。」と共に、面接会場（現状 THE VIRGO FUKUOKA の住所）・
+地図・キャンセル方法を表示します。直前の送信内容は`sessionStorage`経由で`/entry`から`/thanks`へ
+引き継ぐため（サーバーへは送信されません）、氏名・日時を含めた個別化した表示になります。
+LINE等から`/thanks`へ直接アクセスした場合（送信内容が無い場合）は、氏名・日時を含まない
+一般的な完了メッセージのみを表示します。
 
 ### 送信データの形
 
 `lib/apply-types.ts` で以下の形に整理しています（saiyou側 `src/types/recruitLp.ts` の
-`RecruitLpApplyPayload` と一致）。`website` は非表示のハニーポット欄で、
+`RecruitLpApplyPayload` と一致）。`jobType` は希望職種の選択用（LP内部専用。saiyou側へは
+送信せず、選択に応じて`source`へ反映されます）。`website` は非表示のハニーポット欄で、
 ボット検知にのみ使用します。
 
 ```ts
 type ApplyFormData = {
+  jobType: "cast" | "staff" | "";  // 希望職種（内部用。初期状態は未選択）
   name: string;
   furigana: string;
   birthDate: string;       // YYYY-MM-DD
   phone: string;            // ハイフン有無どちらでも可（保存時にsaiyou側で正規化）
-  preferredStore: "virgo" | "regina";
+  preferredStore: "virgo" | "regina" | "either"; // "either"はスタッフ選択時のみ
   interviewDate: string;   // YYYY-MM-DD
   interviewTime: string;   // HH:mm
-  source: "cast-lp";        // 応募チャネル（本LPはキャスト採用専用。saiyou側 RecruitLpChannel参照）
+  source: "cast-lp" | "staff-lp"; // 応募チャネル（希望職種から自動決定。saiyou側 RecruitLpChannel参照）
   website?: string;         // ハニーポット（非表示）
 };
 ```
@@ -141,7 +157,7 @@ type ApplyFormData = {
 - 面接会場の住所は現状 THE VIRGO FUKUOKA のものを設定しています
   （`lib/site-config.ts` の `INTERVIEW_VENUE`）。REGINA希望者にも
   同一会場で面接を行う想定です。異なる場合は店舗ごとに出し分けるよう
-  `ApplyModal.tsx` の `ConfirmationView` を調整してください。
+  `components/ThanksContent.tsx` を調整してください。
 - 公式LINE URLは `https://lin.ee/tJNd5ae` に統一済みです
   （「LINEで応募する」「面接キャンセル」「問い合わせ」「固定LINEボタン」すべて）。
   変更する場合は `lib/site-config.ts` の `SITE.lineUrl` のみ編集すれば

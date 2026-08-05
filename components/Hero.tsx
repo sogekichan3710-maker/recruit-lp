@@ -4,10 +4,8 @@ import { motion } from "framer-motion";
 import { MessageCircle, ArrowDown, CalendarCheck } from "lucide-react";
 import GoldButton from "./GoldButton";
 import { HERO, SITE } from "@/lib/site-config";
-import { useApplyModal } from "./ApplyModalProvider";
 
 export default function Hero() {
-  const { openModal } = useApplyModal();
   return (
     <section className="relative h-[100svh] w-full overflow-hidden bg-ink">
       {/* 背景動画（実店舗PV） */}
@@ -73,7 +71,7 @@ export default function Hero() {
             LINEで応募する
           </GoldButton>
           <GoldButton
-            onClick={openModal}
+            href="/entry"
             variant="outline"
             icon={CalendarCheck}
             className="w-full sm:w-auto"

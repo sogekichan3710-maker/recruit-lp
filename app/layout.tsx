@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Shippori_Mincho, Zen_Kaku_Gothic_New } from "next/font/google";
 import "./globals.css";
 import StickyApplyButton from "@/components/StickyApplyButton";
-import { ApplyModalProvider } from "@/components/ApplyModalProvider";
 
 const serif = Shippori_Mincho({
   subsets: ["latin"],
@@ -45,10 +44,8 @@ export default function RootLayout({
   return (
     <html lang="ja" className={`${serif.variable} ${sans.variable}`}>
       <body className="font-body antialiased bg-ink text-ivory overflow-x-hidden">
-        <ApplyModalProvider>
-          {children}
-          <StickyApplyButton />
-        </ApplyModalProvider>
+        {children}
+        <StickyApplyButton />
       </body>
     </html>
   );
