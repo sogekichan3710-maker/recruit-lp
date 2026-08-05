@@ -15,8 +15,19 @@ import {
 } from "lucide-react";
 import { useApplyModal } from "./ApplyModalProvider";
 import { submitApplication } from "@/lib/submit-application";
-import { ApplyFormData, StoreChoice, STORE_LABEL } from "@/lib/apply-types";
+import {
+  ApplyFormData,
+  STORE_LABEL,
+  STAFF_STORE_LABEL,
+  CAST_STORE_CHOICES,
+  STAFF_STORE_CHOICES,
+  JobType,
+  JOB_TYPE_LABEL,
+  JOB_TYPE_TO_SOURCE,
+} from "@/lib/apply-types";
 import { SITE, INTERVIEW_VENUE } from "@/lib/site-config";
+
+const JOB_TYPE_OPTIONS: JobType[] = ["cast", "staff"];
 
 const TIME_OPTIONS = ["19:00", "19:15", "19:30", "19:45"];
 
@@ -48,6 +59,7 @@ function buildCancelMessage(data: ApplyFormData | null) {
 type Step = "form" | "confirm" | "submitting" | "done" | "error";
 
 const emptyForm: ApplyFormData = {
+  jobType: "",
   name: "",
   furigana: "",
   birthDate: "",
@@ -89,6 +101,17 @@ export default function ApplyModal() {
   const update = (patch: Partial<ApplyFormData>) =>
     setForm((prev) => ({ ...prev, ...patch }));
 
+  const handleJobTypeChange = (value: JobType) => {
+    setForm((prev) => ({
+      ...prev,
+      jobType: value,
+      source: JOB_TYPE_TO_SOURCE[value],
+      // 「どちらでも可」はスタッフ専用の選択肢のため、キャストへ切り替えた際は既定の店舗へ戻す
+      preferredStore:
+        value === "cast" && prev.preferredStore === "either" ? "virgo" : prev.preferredStore,
+    }));
+  };
+
   const handleDateChange = (value: string) => {
     update({ interviewDate: value });
     setDateError(
@@ -98,7 +121,10 @@ export default function ApplyModal() {
     );
   };
 
-  const canProceed =
+  // 希望職種以外の必須項目が揃っているか（送信ボタンの活性・非活性はこちらで判定する）。
+  // 希望職種はここに含めない：未選択のままボタンを非活性にしてしまうと、送信を試みても
+  // クリックイベント自体が発火せず「希望職種を選択してください」のエラーを出す機会がなくなるため。
+  const otherFieldsFilled =
     form.name.trim() &&
     form.furigana.trim() &&
     form.birthDate &&
@@ -106,6 +132,8 @@ export default function ApplyModal() {
     form.interviewDate &&
     !dateError &&
     form.interviewTime;
+
+  const canProceed = !!form.jobType && !!otherFieldsFilled;
 
   const handleConfirmSubmit = async () => {
     setStep("submitting");
@@ -151,10 +179,12 @@ export default function ApplyModal() {
                 <FormView
                   form={form}
                   update={update}
+                  onJobTypeChange={handleJobTypeChange}
                   dateError={dateError}
                   onDateChange={handleDateChange}
                   minDate={minDate}
                   canProceed={!!canProceed}
+                  submitEnabled={!!otherFieldsFilled}
                   onNext={() => setStep("confirm")}
                 />
               )}
@@ -181,22 +211,30 @@ export default function ApplyModal() {
 function FormView({
   form,
   update,
+  onJobTypeChange,
   dateError,
   onDateChange,
   minDate,
   canProceed,
+  submitEnabled,
   onNext,
 }: {
   form: ApplyFormData;
   update: (patch: Partial<ApplyFormData>) => void;
+  onJobTypeChange: (value: JobType) => void;
   dateError: string;
   onDateChange: (v: string) => void;
   minDate: string;
   canProceed: boolean;
+  submitEnabled: boolean;
   onNext: () => void;
 }) {
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const inputClass =
     "w-full rounded-xl border border-hairline bg-ink px-4 py-3 text-base text-ivory placeholder:text-muted/60 outline-none transition-colors focus:border-gold/60";
+
+  const storeChoices = form.jobType === "staff" ? STAFF_STORE_CHOICES : CAST_STORE_CHOICES;
+  const storeLabel = form.jobType === "staff" ? STAFF_STORE_LABEL : STORE_LABEL;
 
   return (
     <div>
@@ -211,12 +249,36 @@ function FormView({
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          setSubmitAttempted(true);
           if (canProceed) onNext();
         }}
         className="mt-6 flex flex-col gap-5"
       >
         <div>
-          <label className="mb-1.5 block text-xs text-muted">① お名前</label>
+          <label className="mb-1.5 block text-xs text-muted">① 希望職種</label>
+          <div className="grid grid-cols-2 gap-3">
+            {JOB_TYPE_OPTIONS.map((jt) => (
+              <button
+                type="button"
+                key={jt}
+                onClick={() => onJobTypeChange(jt)}
+                className={`rounded-xl border px-4 py-3 text-sm font-medium tracking-wide transition-colors ${
+                  form.jobType === jt
+                    ? "border-gold bg-gold/10 text-gold-bright"
+                    : "border-hairline text-muted hover:border-gold/40"
+                }`}
+              >
+                {JOB_TYPE_LABEL[jt]}
+              </button>
+            ))}
+          </div>
+          {submitAttempted && !form.jobType && (
+            <p className="mt-1.5 text-xs text-red-400">希望職種を選択してください</p>
+          )}
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs text-muted">② お名前</label>
           <input
             className={inputClass}
             placeholder="お名前（例：福岡 花子）"
@@ -227,7 +289,7 @@ function FormView({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs text-muted">② ふりがな</label>
+          <label className="mb-1.5 block text-xs text-muted">③ ふりがな</label>
           <input
             className={inputClass}
             placeholder="ふりがな（例：ふくおか はなこ）"
@@ -238,7 +300,7 @@ function FormView({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs text-muted">③ 生年月日</label>
+          <label className="mb-1.5 block text-xs text-muted">④ 生年月日</label>
           <input
             type="date"
             className={inputClass}
@@ -250,7 +312,7 @@ function FormView({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs text-muted">④ 電話番号</label>
+          <label className="mb-1.5 block text-xs text-muted">⑤ 電話番号</label>
           <input
             type="tel"
             inputMode="tel"
@@ -263,9 +325,9 @@ function FormView({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs text-muted">⑤ ご希望店舗</label>
+          <label className="mb-1.5 block text-xs text-muted">⑥ ご希望店舗</label>
           <div className="grid grid-cols-2 gap-3">
-            {(["virgo", "regina"] as StoreChoice[]).map((s) => (
+            {storeChoices.map((s) => (
               <button
                 type="button"
                 key={s}
@@ -276,7 +338,7 @@ function FormView({
                     : "border-hairline text-muted hover:border-gold/40"
                 }`}
               >
-                {STORE_LABEL[s]}
+                {storeLabel[s]}
               </button>
             ))}
           </div>
@@ -284,7 +346,7 @@ function FormView({
 
         <div>
           <label className="mb-1.5 block text-xs text-muted">
-            ⑥ 面接希望日時（月〜土 19:00〜20:00）
+            ⑦ 面接希望日時（月〜土 19:00〜20:00）
           </label>
           <div className="grid grid-cols-2 gap-3">
             <input
@@ -326,7 +388,7 @@ function FormView({
 
         <button
           type="submit"
-          disabled={!canProceed}
+          disabled={!submitEnabled}
           className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-b from-gold-bright to-gold px-7 py-3.5 text-sm font-medium text-ink shadow-gold transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
         >
           入力内容を確認する
@@ -345,12 +407,14 @@ function ConfirmStepView({
   onBack: () => void;
   onSubmit: () => void;
 }) {
+  const storeLabel = form.jobType === "staff" ? STAFF_STORE_LABEL : STORE_LABEL;
   const rows: [string, string][] = [
+    ["希望職種", form.jobType ? JOB_TYPE_LABEL[form.jobType] : ""],
     ["お名前", form.name],
     ["ふりがな", form.furigana],
     ["生年月日", form.birthDate],
     ["電話番号", form.phone],
-    ["ご希望店舗", STORE_LABEL[form.preferredStore]],
+    ["ご希望店舗", storeLabel[form.preferredStore]],
     ["面接希望日時", `${formatJaDate(form.interviewDate)} ${form.interviewTime}〜`],
   ];
 
@@ -434,7 +498,8 @@ function ConfirmationView({
 
       {data && (
         <p className="mt-2 text-xs text-muted leading-relaxed">
-          {STORE_LABEL[data.preferredStore]} ／ {formatJaDate(data.interviewDate)} {data.interviewTime}〜
+          {(data.jobType === "staff" ? STAFF_STORE_LABEL : STORE_LABEL)[data.preferredStore]} ／{" "}
+          {formatJaDate(data.interviewDate)} {data.interviewTime}〜
         </p>
       )}
 
